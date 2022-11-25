@@ -109,6 +109,16 @@
               width: item.width + 'px',
             }"
           ></div>
+          <div
+            class="h-line"
+            v-for="item in hLineList"
+            :key="item.id"
+            :style="{
+              top: item.top + 'px',
+              left: item.left + 'px',
+              height: item.height + 'px',
+            }"
+          ></div>
         </template>
       </div>
       <button class="save-button" @click="saveSetting">保存</button>
@@ -162,6 +172,8 @@ export default {
       changeNode: {},
       vLineMap: {},
       vLineList: [],
+      hLineMap: {},
+      hLineList: [],
     };
   },
   computed: {
@@ -290,6 +302,9 @@ export default {
       this.canvasRender();
       console.log("鼠标松开");
       this.vLineList = [];
+      this.hLineList = [];
+      this.vLineMap = {};
+      this.hLineMap = {};
     },
     moveItem(event, index) {
       if (!this.canMove || !this.selectNode.top) return;
@@ -312,31 +327,74 @@ export default {
           height: moveHeight,
         } = this.renderList[index].attr;
         this.vLineMap[i] = [];
+        this.hLineMap[i] = [];
         // 顶对顶 横条
         if (Math.abs(moveTop - top) < 5) {
           this.renderList[index].attr.top = top;
           moveTop = top;
-        } else if (Math.abs(moveTop - (top + height)) < 5) {
+        }
+        if (Math.abs(moveTop - (top + height)) < 5) {
           this.renderList[index].attr.top = top + height;
           moveTop = top + height;
-        } else if (
-          Math.abs(moveHeight / 2 + moveTop - (height / 2 + top)) < 5
-        ) {
+        }
+        if (Math.abs(moveTop - (top + height / 2)) < 5) {
+          this.renderList[index].attr.top = top + height / 2;
+          moveTop = top + height / 2;
+        }
+        if (Math.abs(moveHeight / 2 + moveTop - (height / 2 + top)) < 5) {
           this.renderList[index].attr.top = height / 2 + top - moveHeight / 2;
           moveTop = height / 2 + top - moveHeight / 2;
-        } else if (Math.abs(moveTop + moveHeight - top) < 5) {
+        }
+        if (Math.abs(moveTop + moveHeight - (top + height / 2)) < 5) {
+          this.renderList[index].attr.top = top + height / 2 - moveHeight;
+          moveTop = top + height / 2 - moveHeight;
+        }
+        if (Math.abs(moveTop + moveHeight - top) < 5) {
           this.renderList[index].attr.top = top - moveHeight;
           moveTop = top - moveHeight;
-        } else if (Math.abs(moveTop + moveHeight - (top + height)) < 5) {
-          console.log('底部对底部', i)
+        }
+        if (Math.abs(moveTop + moveHeight - (top + height)) < 5) {
+          console.log("底部对底部", i);
           this.renderList[index].attr.top = top + height - moveHeight;
           moveTop = top + height - moveHeight;
         }
 
+        // 左对左 吸附
+        if (Math.abs(moveLeft - left) < 5) {
+          this.renderList[index].attr.left = left;
+          moveLeft = left;
+        }
+
+        if (Math.abs(moveLeft - (width / 2 + left)) < 5) {
+          this.renderList[index].attr.left = width / 2 + left;
+          moveLeft = width / 2 + left;
+        }
+
+        if (Math.abs(moveLeft - (width + left)) < 5) {
+          this.renderList[index].attr.left = width + left;
+          moveLeft = width + left;
+        }
+
+        if (Math.abs(moveLeft + moveWidth - left) < 5) {
+          this.renderList[index].attr.left = left - moveWidth;
+          moveLeft = left - moveWidth;
+        }
+
+        if (Math.abs(moveLeft + moveWidth - (left + width / 2)) < 5) {
+          this.renderList[index].attr.left = left + width / 2 - moveWidth;
+          moveLeft = left + width / 2 - moveWidth;
+        }
+
+        if (Math.abs(moveLeft + moveWidth - (left + width)) < 5) {
+          this.renderList[index].attr.left = left + width - moveWidth;
+          moveLeft = left + width - moveWidth;
+        }
+
+        // 顶对顶 横条
         if (Math.abs(moveTop - top) == 0) {
           console.log(`index为${i}的元素与${index}顶部相同`);
           this.vLineMap[i].push({
-            id: +new Date(),
+            id: +new Date() + "top_top",
             target: i,
             left: Math.min(moveLeft, left),
             top: moveTop,
@@ -347,9 +405,22 @@ export default {
           });
         }
         // 顶对底 横条
-        else if (Math.abs(moveTop - (top + height)) == 0) {
+        if (Math.abs(moveTop - (top + height)) == 0) {
           this.vLineMap[i].push({
-            id: +new Date(),
+            id: +new Date() + "top_bottom",
+            target: i,
+            left: Math.min(moveLeft, left),
+            top: moveTop,
+            width:
+              left > moveLeft
+                ? width + left - moveLeft
+                : Math.max(moveWidth + moveLeft - left, width),
+          });
+        }
+        // 顶对中 横条
+        if (Math.abs(moveTop - (top + height / 2)) == 0) {
+          this.vLineMap[i].push({
+            id: +new Date() + "mid_mid",
             target: i,
             left: Math.min(moveLeft, left),
             top: moveTop,
@@ -360,9 +431,9 @@ export default {
           });
         }
         // 中对中 横条
-        else if (Math.abs(moveHeight / 2 + moveTop - (height / 2 + top)) == 0) {
+        if (Math.abs(moveHeight / 2 + moveTop - (height / 2 + top)) == 0) {
           this.vLineMap[i].push({
-            id: +new Date(),
+            id: +new Date() + "mid_mid",
             target: i,
             left: Math.min(moveLeft, left),
             top: moveHeight / 2 + moveTop,
@@ -373,9 +444,24 @@ export default {
           });
         }
         // 底对顶 横条
-        else if (Math.abs(moveTop + moveHeight - top) == 0) {
+        if (Math.abs(moveTop + moveHeight - top) == 0) {
           this.vLineMap[i].push({
-            id: +new Date(),
+            id: +new Date() + "bottom_top",
+            target: i,
+            left: Math.min(moveLeft, left),
+            top: moveTop + moveHeight,
+            width:
+              left > moveLeft
+                ? width + left - moveLeft
+                : Math.max(moveWidth + moveLeft - left, width),
+          });
+          
+        }
+
+        // 底对中 横条
+        if (Math.abs(moveTop + moveHeight - (top + height / 2)) == 0) {
+          this.vLineMap[i].push({
+            id: +new Date() + "bottom_mid",
             target: i,
             left: Math.min(moveLeft, left),
             top: moveTop + moveHeight,
@@ -385,10 +471,12 @@ export default {
                 : Math.max(moveWidth + moveLeft - left, width),
           });
         }
+
         // 底对底 横条
-        else if (Math.abs(moveTop + moveHeight - (top + height) == 0)) {
+        if (Math.abs(moveTop + moveHeight - (top + height) == 0)) {
+          console.log("底对底");
           this.vLineMap[i].push({
-            id: +new Date(),
+            id: +new Date() + "bottom_bottom",
             target: i,
             left: Math.min(moveLeft, left),
             top: moveTop + moveHeight,
@@ -398,9 +486,95 @@ export default {
                 : Math.max(moveWidth + moveLeft - left, width),
           });
         }
-        // console.log("vLineMap", JSON.stringify(this.vLineMap));
+
+        // 左对左
+        if (Math.abs(moveLeft - left) == 0) {
+          this.hLineMap[i].push({
+            id: +new Date() + "left_left",
+            target: i,
+            left: moveLeft,
+            top: Math.min(moveTop, top),
+            height:
+              moveTop > top
+                ? Math.max(moveHeight + moveTop - top, height)
+                : Math.max(height + top - moveTop, moveHeight),
+          });
+        }
+
+        // 左对中
+        if (Math.abs(moveLeft - (width / 2 + left)) == 0) {
+          this.hLineMap[i].push({
+            id: +new Date() + "left_mid",
+            target: i,
+            left: moveLeft,
+            top: Math.min(moveTop, top),
+            height:
+              moveTop > top
+                ? Math.max(moveHeight + moveTop - top, height)
+                : Math.max(height + top - moveTop, moveHeight),
+          });
+        }
+
+        // 左对右
+        if (Math.abs(moveLeft - (width + left)) == 0) {
+          this.hLineMap[i].push({
+            id: +new Date() + "left_right",
+            target: i,
+            left: moveLeft,
+            top: Math.min(moveTop, top),
+            height:
+              moveTop > top
+                ? Math.max(moveHeight + moveTop - top, height)
+                : Math.max(height + top - moveTop, moveHeight),
+          });
+        }
+
+        // 右对左
+        if (Math.abs(moveLeft + moveWidth - left) == 0) {
+          this.hLineMap[i].push({
+            id: +new Date() + "left_right",
+            target: i,
+            left: moveLeft + moveWidth,
+            top: Math.min(moveTop, top),
+            height:
+              moveTop > top
+                ? Math.max(moveHeight + moveTop - top, height)
+                : Math.max(height + top - moveTop, moveHeight),
+          });
+        }
+
+        // 右对中
+        if (Math.abs(moveLeft + moveWidth - (left + width / 2)) == 0) {
+          this.hLineMap[i].push({
+            id: +new Date() + "left_right",
+            target: i,
+            left: moveLeft + moveWidth,
+            top: Math.min(moveTop, top),
+            height:
+              moveTop > top
+                ? Math.max(moveHeight + moveTop - top, height)
+                : Math.max(height + top - moveTop, moveHeight),
+          });
+        }
+
+        // 右对右
+        if (Math.abs(moveLeft + moveWidth - (left + width)) == 0) {
+          this.hLineMap[i].push({
+            id: +new Date() + "left_right",
+            target: i,
+            left: moveLeft + moveWidth,
+            top: Math.min(moveTop, top),
+            height:
+              moveTop > top
+                ? Math.max(moveHeight + moveTop - top, height)
+                : Math.max(height + top - moveTop, moveHeight),
+          });
+        }
         console.log(JSON.stringify(Object.values(this.vLineMap).flat()));
+        console.log(JSON.stringify(Object.values(this.hLineMap).flat()));
+
         this.vLineList = Object.values(this.vLineMap).flat();
+        this.hLineList = Object.values(this.hLineMap).flat();
       }
 
       // this.canvasRender();
@@ -611,11 +785,18 @@ export default {
       }
       .v-line {
         position: absolute;
-        top: 10px;
+        top: 0;
         left: 0;
-        width: 200px;
-        height: 2px;
-        background-color: yellow;
+        height: 0;
+        border-top: dashed 1px yellow;
+        z-index: 2;
+      }
+      .h-line {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        border-left: dashed 1px yellow;
         z-index: 2;
       }
     }
