@@ -38,6 +38,7 @@
             left: item.attr.left + 'px',
             width: item.attr.width + 'px',
             height: item.attr.height + 'px',
+            transform: `rotate(${item.attr.deg || 0}deg)`,
             background: item.attr.background,
           }"
           :key="index"
@@ -54,6 +55,7 @@
             @mouseup="moveEnd()"
             @mousemove="moveItem($event, index)"
             @click="changeItem($event, index)"
+            draggable="false"
           >
             {{ index }}
           </div>
@@ -68,12 +70,28 @@
             draggable="false"
           />
           <template v-if="changeNode.index == index">
+            <img
+              class="rotate-icon"
+              src="@/assets/icon.png"
+              @mousedown="mouseDownItem($event)"
+              @mouseup="mouseUpItem()"
+              draggable="false"
+            />
             <div
               class="icon tl"
               :ref="`labeltlIcon${index}`"
               @mousedown="startMarkerItem($event, 'tl', index)"
               @mouseup="endMarkerItem($event, 'tl', index)"
               @mouseover="endMarkerItem($event, 'tl', index)"
+              draggable="false"
+            ></div>
+            <div
+              class="icon tm"
+              :ref="`labeltmIcon${index}`"
+              @mousedown="startMarkerItem($event, 'tm', index)"
+              @mouseup="endMarkerItem($event, 'tm', index)"
+              @mouseover="endMarkerItem($event, 'tm', index)"
+              draggable="false"
             ></div>
             <div
               class="icon tr"
@@ -81,6 +99,7 @@
               @mousedown="startMarkerItem($event, 'tr', index)"
               @mouseup="endMarkerItem($event, 'tr', index)"
               @mouseover="endMarkerItem($event, 'tr', index)"
+              draggable="false"
             ></div>
             <div
               class="icon bl"
@@ -88,6 +107,15 @@
               @mousedown="startMarkerItem($event, 'bl', index)"
               @mouseup="endMarkerItem($event, 'bl', index)"
               @mouseover="endMarkerItem($event, 'bl', index)"
+              draggable="false"
+            ></div>
+            <div
+              class="icon bm"
+              :ref="`labelbmIcon${index}`"
+              @mousedown="startMarkerItem($event, 'bm', index)"
+              @mouseup="endMarkerItem($event, 'bm', index)"
+              @mouseover="endMarkerItem($event, 'bm', index)"
+              draggable="false"
             ></div>
             <div
               class="icon br"
@@ -95,6 +123,23 @@
               @mousedown="startMarkerItem($event, 'br', index)"
               @mouseup="endMarkerItem($event, 'br', index)"
               @mouseover="endMarkerItem($event, 'br', index)"
+              draggable="false"
+            ></div>
+            <div
+              class="icon lm"
+              :ref="`labellmIcon${index}`"
+              @mousedown="startMarkerItem($event, 'lm', index)"
+              @mouseup="endMarkerItem($event, 'lm', index)"
+              @mouseover="endMarkerItem($event, 'lm', index)"
+              draggable="false"
+            ></div>
+            <div
+              class="icon rm"
+              :ref="`labelrmIcon${index}`"
+              @mousedown="startMarkerItem($event, 'rm', index)"
+              @mouseup="endMarkerItem($event, 'rm', index)"
+              @mouseover="endMarkerItem($event, 'rm', index)"
+              draggable="false"
             ></div>
           </template>
         </div>
@@ -191,11 +236,14 @@ export default {
   },
   methods: {
     changeItem(event, index) {
+      let { x, y } = event;
       if (this.changeNode.index == index) {
         this.changeNode = {};
       } else {
         this.changeNode = {
           index,
+          x,
+          y,
         };
       }
       console.log(this.changeNode);
@@ -241,6 +289,7 @@ export default {
                 width: 100,
                 height: 100,
                 top: 0,
+                deg: 0,
                 left: 0,
                 background: this.dragObj.attr.background,
               },
@@ -253,6 +302,7 @@ export default {
                 width: 100,
                 height: 100,
                 top: 0,
+                deg: 0,
                 left: 0,
                 url: this.dragObj.attr.url,
               },
@@ -455,7 +505,6 @@ export default {
                 ? width + left - moveLeft
                 : Math.max(moveWidth + moveLeft - left, width),
           });
-          
         }
 
         // 底对中 横条
@@ -570,8 +619,6 @@ export default {
                 : Math.max(height + top - moveTop, moveHeight),
           });
         }
-        console.log(JSON.stringify(Object.values(this.vLineMap).flat()));
-        console.log(JSON.stringify(Object.values(this.hLineMap).flat()));
 
         this.vLineList = Object.values(this.vLineMap).flat();
         this.hLineList = Object.values(this.hLineMap).flat();
@@ -615,6 +662,16 @@ export default {
           this.renderList[index].attr.top = y + Number(top);
         } else if (name == "br") {
           this.renderList[index].attr.width = Number(width) + x;
+          this.renderList[index].attr.height = Number(height) + y;
+        } else if (name == "tm") {
+          this.renderList[index].attr.height = Number(height) - y;
+          this.renderList[index].attr.top = y + Number(top);
+        } else if (name == "lm") {
+          this.renderList[index].attr.width = Number(width) - x;
+          this.renderList[index].attr.left = Number(left) + x;
+        } else if (name == "rm") {
+          this.renderList[index].attr.width = x + Number(width);
+        } else if (name == "bm") {
           this.renderList[index].attr.height = Number(height) + y;
         } else if (name == "tl") {
           this.renderList[index].attr.width = Number(width) - x;
@@ -698,6 +755,47 @@ export default {
         img.src = item.attr.url;
       });
     },
+    mouseDownItem(event) {
+      let { x: moveX, y: moveY, index } = this.changeNode;
+      const { deg = 0, height, width } = this.renderList[index].attr;
+      const { x: startX, y: startY } = event;
+      let fn = (e) => {
+        const { x: endX, y: endY } = e;
+        const angle = this.getAngle(
+          [moveX + width / 2, moveY + height / 2],
+          [startX, startY],
+          [endX, endY]
+        );
+        this.$set(this.renderList[index].attr, "deg", angle + deg || 0);
+      };
+      window.addEventListener("mousemove", fn);
+      window.addEventListener("mouseup", () => {
+        window.removeEventListener("mousemove", fn);
+      });
+      setTimeout(() => {}, 0);
+    },
+    mouseUpItem() {
+      console.log(2222);
+    },
+    /**
+     * cen：中心点
+     * first：开始点
+     * end：结束点
+     */
+    getAngle(cen, first, end) {
+      let [cx, cy] = cen;
+      let [x1, y1] = first;
+      let [x2, y2] = end;
+      let c1 = (Math.atan2(y1 - cy, x1 - cx) * 180) / Math.PI;
+      let c2 = (Math.atan2(y2 - cy, x2 - cx) * 180) / Math.PI;
+      let angle;
+      c1 = c1 <= -90 ? 360 + c1 : c1;
+      c2 = c2 <= -90 ? 360 + c2 : c2;
+      //夹角获取
+      angle = Math.floor(c2 - c1);
+      angle = angle < 0 ? angle + 360 : angle;
+      return angle;
+    },
   },
 };
 </script>
@@ -746,10 +844,20 @@ export default {
         &--active {
           border: 1px solid #000;
         }
+        .rotate-icon {
+          position: absolute;
+          top: -60px;
+          width: 40px;
+          height: 40px;
+          cursor: grab;
+        }
         .icon {
           position: absolute;
-          width: 10px;
-          height: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 8px;
+          height: 8px;
           background: #fff;
           border: 1px solid #666;
           z-index: 3;
@@ -767,6 +875,10 @@ export default {
           left: -5px;
           cursor: nwse-resize;
         }
+        .tm {
+          top: -5px;
+          cursor: ns-resize;
+        }
         .tr {
           top: -5px;
           right: -5px;
@@ -776,6 +888,18 @@ export default {
           left: -5px;
           bottom: -5px;
           cursor: nesw-resize;
+        }
+        .lm {
+          left: -5px;
+          cursor: ew-resize;
+        }
+        .rm {
+          right: -5px;
+          cursor: ew-resize;
+        }
+        .bm {
+          bottom: -5px;
+          cursor: ns-resize;
         }
         .br {
           right: -5px;
